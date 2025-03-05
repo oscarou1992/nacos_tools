@@ -217,11 +217,11 @@ REDIS_PORT=6379
 REDIS_DB=0
 
 # Storage (based on STORAGE_TYPE)
-STORAGE_TYPE=aliyun
-ALIYUN_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
-ALIYUN_ACCESS_KEY_ID=your_access_key_id
-ALIYUN_ACCESS_KEY_SECRET=your_access_key_secret
-ALIYUN_BUCKET_NAME=my-bucket
+STORAGE_TYPE=aliyun-oss
+ALIYUN_OSS_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
+ALIYUN_OSS_ACCESS_KEY_ID=your_access_key_id
+ALIYUN_OSS_ACCESS_KEY_SECRET=your_access_key_secret
+ALIYUN_OSS_BUCKET_NAME=my-bucket
 ```
 
 ### Configuration Updates

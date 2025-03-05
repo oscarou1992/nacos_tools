@@ -37,7 +37,7 @@ class ToolManager:
         self.register_tool("vdb", "mysql", MySQLConnector)
         self.register_tool("vdb", "postgresql", PostgresConnector)
         self.register_tool("cache", "redis", RedisCache)
-        self.register_tool("storage", "aliyun", AliyunOSS)
+        self.register_tool("storage", "aliyun-oss", AliyunOSS)
 
     def register_tool(self, category, type_name, tool_class):
         """
@@ -64,7 +64,7 @@ class ToolManager:
             ValueError: If required fields are missing.
         """
         required_fields = {
-            "vdb": ["type", "host", "user", "password", "database"],
+            "vdb": ["type", "connection", "host", "user", "password", "database"],
             "cache": ["type", "host", "port", "db"],
             "storage": ["type", "endpoint", "access_key_id", "access_key_secret", "bucket_name"]
         }
@@ -87,7 +87,7 @@ class ToolManager:
             ValueError: If configuration or tool type is invalid.
         """
         for tool_category, config in tools_config.items():
-            self._validate_config(tool_category, config)
+            # self._validate_config(tool_category, config)
             tool_type = config.get("type", "").lower()
 
             if tool_category not in self.tool_registry or tool_type not in self.tool_registry[tool_category]:

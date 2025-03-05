@@ -14,18 +14,15 @@ import asyncio
 
 class NacosTools:
     def __init__(self, server_addr="http://localhost:8848", namespace="public", group="DEFAULT_GROUP", data_id="",
-                 async_mode=True):
+                 username=None, password=None, async_mode=True):
         """Initialize NacosTools with server address, namespace, group, environment, and async mode."""
 
         # nacos 配置
-        self.server_addr = server_addr
-        self.namespace = namespace
-        self.group = group
         self.data_id = data_id
 
         # nacos tools
         self.async_mode = async_mode
-        self.config = NacosConfig(server_addr, namespace, group)
+        self.config = NacosConfig(server_addr, namespace, group, username, password)
         self.discovery = NacosDiscovery(self.config.client)
         self.tools = ToolManager()
 
@@ -46,7 +43,7 @@ class NacosTools:
 
         # 异步监听配置变更
         async def config_callback(args):
-            self.config.load_config(self.data_id)
+            self.config.update_config(args)
             await self._update_tools()
 
         self.config.start_listening(self.data_id, config_callback)
@@ -83,8 +80,8 @@ class NacosTools:
                 raise ValueError(f"Unsupported {category} type: {tool_type}")
             await self.tools.update_tool(category, tools_config[category], self.async_mode)
 
-    def get_service_url(self, service_name, endpoint):
-        return self.discovery.get_service_url(service_name, endpoint)
+    def get_service_url(self, service_name):
+        return self.discovery.get_service_url(service_name)
 
     async def get_db(self):
         """Get the database tool instance."""

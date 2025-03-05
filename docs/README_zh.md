@@ -233,7 +233,7 @@ REDIS_PORT=6379
 REDIS_DB=0
 
 # 存储（根据 STORAGE_TYPE 动态选择）
-STORAGE_TYPE=aliyun
+STORAGE_TYPE=aliyun-oss
 ALIYUN_ENDPOINT=oss-cn-hangzhou.aliyuncs.com
 ALIYUN_ACCESS_KEY_ID=your_access_key_id
 ALIYUN_ACCESS_KEY_SECRET=your_access_key_secret

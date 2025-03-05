@@ -19,7 +19,7 @@ setup(
     description="A Python library for Nacos integration with virtual database (async/sync), cache, and storage systems",
     long_description=open("docs/README.md").read(),
     long_description_content_type="text/markdown",
-    # url="https://github.com/yourusername/nacos-tools",  # 可选，GitHub 地址
+    url="https://github.com/oscarou1992/nacos_tools",
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",

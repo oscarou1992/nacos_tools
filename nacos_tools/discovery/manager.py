@@ -12,6 +12,6 @@ class DiscoveryManager(ABC):
         pass
 
     @abstractmethod
-    def get_service_url(self, service_name, endpoint):
-        """Get the URL of a service instance for a given endpoint."""
+    def get_service_url(self, service_name):
+        """Get the URL of a service instance."""
         pass
