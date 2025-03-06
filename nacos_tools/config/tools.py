@@ -43,7 +43,11 @@ def get_tool_configs():
                 "type": os.getenv("CACHE_TYPE", "redis"),
                 "host": os.getenv("REDIS_HOST", "localhost"),
                 "port": int(os.getenv("REDIS_PORT", 6379)),
-                "db": int(os.getenv("REDIS_DB", 0))
+                "db": int(os.getenv("REDIS_DB", 0)),
+                "username": os.getenv("REDIS_USER"),
+                'password': os.getenv("REDIS_PASSWORD"),
+                'decode_responses': True,
+                'socket_timeout': 5
             }
         },
 

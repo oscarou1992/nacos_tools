@@ -98,17 +98,7 @@ class ToolManager:
             asyncio.run(tool_instance.connect())
             self.tools[tool_category] = ToolProxy(tool_instance)
 
-    async def update_tool(self, category, config, async_mode):
-        """Update a specific tool instance with new configuration."""
-        tool_type = config.get("type", "").lower()
-        if tool_type not in self.tool_registry[category]:
-            raise ValueError(f"Unsupported {category} type: {tool_type}")
-        tool_class = self.tool_registry[category][tool_type]
-        new_instance = tool_class(config, async_mode=async_mode)
-        await new_instance.connect()
-        await self.tools[category].update(new_instance)
-
-    async def get_tool(self, category):
+    def get_tool(self, category):
         """
         Get the tool instance for the specified category.
 
@@ -120,7 +110,34 @@ class ToolManager:
         """
         return self.tools.get(category)
 
-    # 便捷方法，保持向后兼容
+    def get_db_sync(self):
+        """Get the database tool instance (alias for get_tool('vdb'))."""
+        return self.get_tool("vdb")
+
+    def get_cache_sync(self):
+        """Get the cache tool instance (alias for get_tool('cache'))."""
+        return self.get_tool("cache")
+
+    def get_storage_sync(self):
+        """Get the storage tool instance (alias for get_tool('storage'))."""
+        return self.get_tool("storage")
+
+    def shutdown_sync(self):
+        """Asynchronously close all initialized tools."""
+        for tool in self.tools.values():
+            tool.close()
+        self.tools.clear()
+
+    async def update_tool(self, category, config, async_mode):
+        """Update a specific tool instance with new configuration."""
+        tool_type = config.get("type", "").lower()
+        if tool_type not in self.tool_registry[category]:
+            raise ValueError(f"Unsupported {category} type: {tool_type}")
+        tool_class = self.tool_registry[category][tool_type]
+        new_instance = tool_class(config, async_mode=async_mode)
+        await new_instance.connect()
+        await self.tools[category].update(new_instance)
+
     async def get_db(self):
         """Get the database tool instance (alias for get_tool('vdb'))."""
         return await self.get_tool("vdb")

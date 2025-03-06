@@ -44,7 +44,7 @@ class NacosTools:
         # 异步监听配置变更
         async def config_callback(args):
             self.config.update_config(args)
-            await self._update_tools()
+            await self.update_tools()
 
         self.config.start_listening(self.data_id, config_callback)
 
@@ -56,6 +56,22 @@ class NacosTools:
 
     def get_service_url(self, service_name):
         return self.discovery.get_service_url(service_name)
+
+    def get_db_sync(self):
+        """Get the database tool instance synchronously."""
+        return self.tools.get_db_sync()
+
+    def get_cache_sync(self):
+        """Get the cache tool instance synchronously."""
+        return self.tools.get_cache_sync()
+
+    def get_storage_sync(self):
+        """Get the storage tool instance synchronously."""
+        return self.tools.get_storage_sync()
+
+    def get_tool_sync(self, category):
+        """Get a specific tool instance by category synchronously."""
+        return self.tools.get_tool(category)
 
     def _initialize_tools(self):
         """Initialize database, cache, and storage tools from environment variables."""
@@ -74,7 +90,7 @@ class NacosTools:
 
         self.tools.initialize(tools_config, async_mode=self.async_mode)
 
-    async def _update_tools(self):
+    async def update_tools(self):
         """Update tools with new configurations on change."""
         tool_configs = get_tool_configs()
         tools_config = {}

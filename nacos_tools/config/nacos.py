@@ -158,9 +158,9 @@ class NacosConfig(ConfigManager):
     def stop_listening(self):
         """Stop listening for configuration changes."""
         self._running = False
-        if self._listener_thread and self._listener_thread.is_alive():
+        if hasattr(self, '_listener_thread') and self._listener_thread and self._listener_thread.is_alive():
             self._listener_thread.join(timeout=2)  # 等待线程结束，最多等待2秒
-        if self._loop:
+        if hasattr(self, '_loop') and self._loop:
             self._loop.stop()
 
     def start_heartbeat(self, service_name, ip, port):
@@ -177,7 +177,7 @@ class NacosConfig(ConfigManager):
     def stop_heartbeat(self):
         """停止心跳检测"""
         self._heartbeat_running = False
-        if self._heartbeat_thread and self._heartbeat_thread.is_alive():
+        if hasattr(self, '_heartbeat_thread') and self._heartbeat_thread and self._heartbeat_thread.is_alive():
             self._heartbeat_thread.join(timeout=2)
 
     def __del__(self):

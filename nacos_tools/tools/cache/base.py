@@ -12,13 +12,8 @@ class CacheTool(ABC):
         pass
 
     @abstractmethod
-    async def set(self, key, value, ttl=None):
+    def get_client(self):
         """Asynchronously set a key-value pair in the cache with optional TTL."""
-        pass
-
-    @abstractmethod
-    async def get(self, key):
-        """Asynchronously get a value from the cache by key."""
         pass
 
     @abstractmethod
