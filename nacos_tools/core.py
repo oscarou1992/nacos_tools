@@ -51,6 +51,12 @@ class NacosTools:
         # 注册服务
         self.discovery.register_service(service_name, service_ip, service_port)
 
+        # 启动心跳
+        self.config.start_heartbeat(service_name, service_ip, service_port)
+
+    def get_service_url(self, service_name):
+        return self.discovery.get_service_url(service_name)
+
     def _initialize_tools(self):
         """Initialize database, cache, and storage tools from environment variables."""
 
@@ -79,9 +85,6 @@ class NacosTools:
             else:
                 raise ValueError(f"Unsupported {category} type: {tool_type}")
             await self.tools.update_tool(category, tools_config[category], self.async_mode)
-
-    def get_service_url(self, service_name):
-        return self.discovery.get_service_url(service_name)
 
     async def get_db(self):
         """Get the database tool instance."""

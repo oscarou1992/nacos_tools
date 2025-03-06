@@ -16,9 +16,17 @@ class NacosConfig(ConfigManager):
         """Initialize Nacos client with server address, namespace, and group."""
         self.client = NacosClient(server_addr, namespace=namespace, username=username, password=password)
         self.group = group
+
+        # 配置监听相关
         self._running = False
         self._listener_thread = None
         self._loop = None
+        self.listener_interval = 5  # 监听间隔（秒）
+
+        # 心跳检测相关
+        self._heartbeat_thread = None
+        self._heartbeat_running = False
+        self.heartbeat_interval = 5  # 心跳间隔（秒）
 
     async def _run_callback(self, callback, args):
         """异步执行回调"""
@@ -86,14 +94,29 @@ class NacosConfig(ConfigManager):
                     last_md5 = current_md5
 
                 # 等待一段时间后再次检查
-                #time.sleep(1)  # 可以调整轮询间隔
+                time.sleep(self.listener_interval)
 
             except Exception as e:
                 print(f"Error in config watcher: {e}")
-                time.sleep(1)
+                time.sleep(5)
 
         if self._loop:
             self._loop.close()
+
+    def _send_heartbeat(self, service_name, ip, port):
+        """发送心跳的内部方法"""
+        while self._heartbeat_running:
+            try:
+                self.client.send_heartbeat(
+                    service_name,
+                    ip,
+                    port,
+                    group_name=self.group
+                )
+                time.sleep(self.heartbeat_interval)
+            except Exception as e:
+                print(f"Error sending heartbeat: {e}")
+                time.sleep(1)  # 出错后等待短暂时间再重试
 
     def update_config(self, args):
         """更新配置变更的内部方法"""
@@ -140,6 +163,24 @@ class NacosConfig(ConfigManager):
         if self._loop:
             self._loop.stop()
 
+    def start_heartbeat(self, service_name, ip, port):
+        """启动心跳检测"""
+        if self._heartbeat_thread is None or not self._heartbeat_thread.is_alive():
+            self._heartbeat_running = True
+            self._heartbeat_thread = threading.Thread(
+                target=self._send_heartbeat,
+                args=(service_name, ip, port),
+                daemon=True
+            )
+            self._heartbeat_thread.start()
+
+    def stop_heartbeat(self):
+        """停止心跳检测"""
+        self._heartbeat_running = False
+        if self._heartbeat_thread and self._heartbeat_thread.is_alive():
+            self._heartbeat_thread.join(timeout=2)
+
     def __del__(self):
         """Cleanup when the object is destroyed."""
+        self.stop_heartbeat()
         self.stop_listening()
