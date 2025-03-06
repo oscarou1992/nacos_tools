@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="nacos-tools",  # 包名
-    version="0.1.3",  # 版本号
+    version="0.1.4",  # 版本号
     packages=find_packages(),  # 自动发现所有包和子包
     install_requires=[
         "sqlalchemy>=1.4.0",
