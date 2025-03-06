@@ -60,10 +60,24 @@ storage = None
 def create_app():
     global db, cache, storage
     nacos.init(service_name="flask-service", service_ip="127.0.0.1", service_port=5000)
-    db = asyncio.run(nacos.get_db())
-    cache = asyncio.run(nacos.get_cache())
-    storage = asyncio.run(nacos.get_storage())
+    db = nacos.get_db_sync()
+    cache = nacos.get_cache_sync()
+    storage = nacos.get_storage_sync()
     return app
+
+@app.get("/test-model-db")
+async def test_model_db():
+    from sqlalchemy import Column, BigInteger, String, TIMESTAMP
+    class XXModel(db.Model):
+        __tablename__ = 'xx_table_name'
+        __table_args__ = {'schema': 'test_db'}
+
+        id = Column(BigInteger, primary_key=True, autoincrement=True)
+        user_id = Column(String(36), nullable=False)
+
+
+    result = db.session.query(XXModel).filter_by(user_id='xxxx').scalar()
+    return {"result": result}
 
 @app.route("/test-db")
 def test_db():
