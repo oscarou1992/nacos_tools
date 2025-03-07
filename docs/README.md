@@ -1,4 +1,4 @@
-[English](https://github.com/oscarou1992/nacos_tools/blob/master/docs/README.md) | [简体中文](https://github.com/oscarou1992/nacos_tools/blob/master/docs/README_zh.md)
+[English](https://github.com/oscarou1992/nacos_tools/tree/master/docs) | [简体中文](https://github.com/oscarou1992/nacos_tools/blob/master/docs/README_zh.md)
 
 
 # Nacos Tools
