@@ -1,12 +1,38 @@
 """
 MySQL connector for VDB using SQLAlchemy ORM with async/sync support.
 """
-from sqlalchemy import create_engine, MetaData
-from sqlalchemy.orm import sessionmaker, declarative_base, declared_attr
+from sqlalchemy import create_engine, MetaData, Column, Integer, String, TIMESTAMP, func, PrimaryKeyConstraint, text, \
+    select
+from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 import asyncio
 from ..base import DatabaseTool
 
+# Import common SQLAlchemy types to make available
+from sqlalchemy.types import (
+    Integer,
+    String,
+    Text,
+    Boolean,
+    DateTime,
+    Float,
+    BigInteger,
+    Date,
+    Time,
+    JSON,
+)
+
+from sqlalchemy import (
+    ForeignKeyConstraint,
+    UniqueConstraint,
+    CheckConstraint,
+    Index
+)
+
+# 首先定义 classproperty 装饰器
+class classproperty(property):
+    def __get__(self, cls, owner):
+        return classmethod(self.fget).__get__(None, owner)()
 
 class MySQLConnector(DatabaseTool):
     def __init__(self, config, async_mode=True):
@@ -38,7 +64,82 @@ class MySQLConnector(DatabaseTool):
                 if hasattr(cls, '__table__'):
                     cls.__table__.info['bind_key'] = bind_key
 
+            @classproperty
+            def query(cls):
+                """动态返回查询对象"""
+                if not hasattr(cls, '_connector'):
+                    raise ValueError("Model is not bound to a connector. Ensure 'db.Model' is used.")
+                bind_key = getattr(cls.__table__.info, 'bind_key', 'default')
+                session = cls._connector.get_session(bind_key)
+                if session is None:
+                    raise ValueError(
+                        f"No session available for bind_key '{bind_key}'. Did you call connect_sync() or connect()?")
+                return session.query(cls)
+
+            @classmethod
+            def get_query(cls):
+                """类级别的查询对象"""
+                if not hasattr(cls, '_connector'):
+                    raise ValueError("Model is not bound to a connector. Ensure 'db.Model' is used.")
+                bind_key = getattr(cls.__table__.info, 'bind_key', 'default') if hasattr(cls,
+                                                                                         '__table__') else 'default'
+                session = cls._connector.get_session(bind_key)
+                if session is None:
+                    raise ValueError(
+                        f"No session available for bind_key '{bind_key}'. Did you call connect_sync() or connect()?")
+                if cls._connector.async_mode:
+                    from sqlalchemy import select
+                    return session.execute(select(cls)).scalars()
+                else:
+                    return session.query(cls)
+
+            # Add Column as a class attribute
+            Column = staticmethod(Column)
+            PrimaryKeyConstraint = staticmethod(PrimaryKeyConstraint)
+            ForeignKeyConstraint = staticmethod(ForeignKeyConstraint)
+            UniqueConstraint = staticmethod(UniqueConstraint)
+            CheckConstraint = staticmethod(CheckConstraint)
+            Index = staticmethod(Index)
+            text = staticmethod(text)  # Add text function for SQL expressions
+
+            # Add common SQLAlchemy types
+            Integer = Integer
+            String = String
+            Text = Text
+            Boolean = Boolean
+            DateTime = DateTime
+            Float = Float
+            BigInteger = BigInteger
+            Date = Date
+            Time = Time
+            JSON = JSON
+            TIMESTAMP = TIMESTAMP
+            func = func  # For SQL functions like current_timestamp()
+
+        # 创建 Model 类并绑定 connector 实例
         self.Model = declarative_base(cls=BindModel, metadata=self.metadata)
+        self.Model._connector = self  # 将 connector 实例绑定到 Model 类
+
+        # Make Column and types accessible through the connector instance
+        self.Column = Column
+        self.PrimaryKeyConstraint = PrimaryKeyConstraint
+        self.ForeignKeyConstraint = ForeignKeyConstraint
+        self.UniqueConstraint = UniqueConstraint
+        self.CheckConstraint = CheckConstraint
+        self.Index = Index
+        self.text = text  # Add text function to connector instance
+        self.Integer = Integer
+        self.String = String
+        self.Text = Text
+        self.Boolean = Boolean
+        self.DateTime = DateTime
+        self.Float = Float
+        self.BigInteger = BigInteger
+        self.Date = Date
+        self.Time = Time
+        self.JSON = JSON
+        self.TIMESTAMP = TIMESTAMP
+        self.func = func
 
     def _create_engine(self, db_config, bind_key=None):
         """创建数据库引擎"""

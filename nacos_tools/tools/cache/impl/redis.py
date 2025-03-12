@@ -33,7 +33,7 @@ class RedisCache(CacheTool):
         if self.async_mode:
             self.client = await aioredis.from_url(
                 self._build_redis_url(),
-                decode_responses=True  # 自动解码为字符串
+                decode_responses=False  # 关闭自动解码
             )
         else:
             self.client = redis.StrictRedis(
@@ -42,7 +42,7 @@ class RedisCache(CacheTool):
                 db=self.config["db"],
                 password=self.config["password"],
                 username=self.config["username"],
-                decode_responses=True  # 自动解码为字符串
+                decode_responses=False  # 关闭自动解码
             )
 
     async def close(self):
@@ -88,6 +88,14 @@ class RedisCache(CacheTool):
 
         if value is None:
             return None
+
+        # 手动解码字节数据
+        if isinstance(value, bytes):
+            try:
+                value = value.decode('utf-8')  # 尝试用 UTF-8 解码
+            except UnicodeDecodeError:
+                # 如果解码失败，返回原始字节或抛出异常，取决于需求
+                return value  # 或 raise Exception("无法解码 Redis 数据")
 
         if return_type == "str":
             return value
