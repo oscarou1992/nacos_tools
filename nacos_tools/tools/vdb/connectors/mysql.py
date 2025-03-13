@@ -77,21 +77,14 @@ class MySQLConnector(DatabaseTool):
 
                 bind_key = getattr(cls.__table__.info, 'bind_key', 'default') if hasattr(cls,
                                                                                          '__table__') else 'default'
-                session = cls._connector.get_session(bind_key)
 
+                if cls._connector.async_mode:
+                    raise ValueError("query property is not supported in async mode. Use get_query() instead.")
+
+                session = cls._connector.get_session(bind_key)
                 if session is None:
                     raise ValueError(
                         f"No session available for bind_key '{bind_key}'. Did you call connect_sync() or connect()?")
-
-                # 确保会话状态正确
-                if session.is_active and session.in_transaction():
-                    try:
-                        session.rollback()
-                    except:
-                        session.close()
-                        session = cls._connector.session_factories[bind_key]()
-                        cls._connector.sessions[bind_key] = session
-
                 return session.query(cls)
 
             @classmethod
@@ -102,45 +95,18 @@ class MySQLConnector(DatabaseTool):
 
                 bind_key = getattr(cls.__table__.info, 'bind_key', 'default') if hasattr(cls,
                                                                                          '__table__') else 'default'
-                session = cls._connector.get_session(bind_key)
 
-                if session is None:
-                    raise ValueError(
-                        f"No session available for bind_key '{bind_key}'. Did you call connect_sync() or connect()?")
-
-                try:
-                    if cls._connector.async_mode:
-                        # 异步模式
-                        if session.is_active:
-                            try:
-                                # 尝试回滚任何未完成的事务
-                                asyncio.create_task(session.rollback())
-                            except:
-                                # 如果回滚失败，关闭并创建新会话
-                                asyncio.create_task(session.close())
-                                session = cls._connector.session_factories[bind_key]()
-                                cls._connector.sessions[bind_key] = session
-
-                        from sqlalchemy import select
-                        return session.execute(select(cls)).scalars()
-                    else:
-                        # 同步模式
-                        if session.is_active and session.in_transaction():
-                            try:
-                                session.rollback()
-                            except:
-                                session.close()
-                                session = cls._connector.session_factories[bind_key]()
-                                cls._connector.sessions[bind_key] = session
-
-                        return session.query(cls)
-                except Exception as e:
-                    # 发生异常时确保回滚
-                    if cls._connector.async_mode:
-                        asyncio.create_task(session.rollback())
-                    else:
-                        session.rollback()
-                    raise e
+                if cls._connector.async_mode:
+                    with cls._connector.async_session_scope(bind_key) as session:
+                        stmt = select(cls)
+                        result = session.execute(stmt)
+                        return result.scalars()
+                else:
+                    session = cls._connector.get_session(bind_key)
+                    if session is None:
+                        raise ValueError(
+                            f"No session available for bind_key '{bind_key}'. Did you call connect_sync() or connect()?")
+                    return session.query(cls)
 
             # Add Column as a class attribute
             Column = staticmethod(Column)
