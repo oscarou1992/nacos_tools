@@ -1,6 +1,9 @@
 """
 MySQL connector for VDB using SQLAlchemy ORM with async/sync support.
 """
+import contextlib
+from contextlib import contextmanager
+
 from sqlalchemy import create_engine, MetaData, Column, Integer, String, TIMESTAMP, func, PrimaryKeyConstraint, text, \
     select
 from sqlalchemy.orm import sessionmaker, declarative_base
@@ -233,7 +236,57 @@ class MySQLConnector(DatabaseTool):
         return self.engines.get(bind_key)
 
     def get_session(self, bind_key='default'):
-        if bind_key not in self.sessions or self.sessions[bind_key].is_active:
-            # 如果会话不存在或已经处于活动状态，创建新的会话
+        """获取指定绑定键的会话，并确保事务状态正确"""
+        if bind_key not in self.sessions:
             self.sessions[bind_key] = self.session_factories[bind_key]()
-        return self.sessions[bind_key]
+
+        session = self.sessions[bind_key]
+
+        # 检查并处理无效事务
+        if not self.async_mode:  # 同步模式
+            if session.is_active and session.in_transaction():
+                try:
+                    session.rollback()
+                except:
+                    session.close()
+                    self.sessions[bind_key] = self.session_factories[bind_key]()
+                    session = self.sessions[bind_key]
+
+        return session
+
+    @contextmanager
+    def session_scope(self, bind_key='default'):
+        """提供事务范围的会话上下文管理器（同步模式）"""
+        session = self.get_session(bind_key)
+        try:
+            yield session
+            session.commit()
+        except Exception as e:
+            session.rollback()
+            raise e
+        finally:
+            session.close()
+
+    @contextlib.asynccontextmanager
+    async def async_session_scope(self, bind_key='default'):
+        """提供事务范围的会话上下文管理器（异步模式）"""
+        session = self.get_session(bind_key)
+        try:
+            yield session
+            await session.commit()
+        except Exception as e:
+            await session.rollback()
+            raise e
+        finally:
+            await session.close()
+
+    def __del__(self):
+        """确保在对象销毁时关闭所有会话"""
+        for session in self.sessions.values():
+            try:
+                if self.async_mode:
+                    asyncio.create_task(session.close())
+                else:
+                    session.close()
+            except:
+                pass
