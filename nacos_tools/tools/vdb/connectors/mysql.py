@@ -29,10 +29,12 @@ from sqlalchemy import (
     Index
 )
 
+
 # 首先定义 classproperty 装饰器
 class classproperty(property):
     def __get__(self, cls, owner):
         return classmethod(self.fget).__get__(None, owner)()
+
 
 class MySQLConnector(DatabaseTool):
     def __init__(self, config, async_mode=True):
@@ -69,7 +71,7 @@ class MySQLConnector(DatabaseTool):
                 """动态返回查询对象"""
                 if not hasattr(cls, '_connector'):
                     raise ValueError("Model is not bound to a connector. Ensure 'db.Model' is used.")
-                bind_key = getattr(cls.__table__.info, 'bind_key', 'default')
+                bind_key = getattr(cls.__table__.info, 'bind_key', 'default') if hasattr(cls, '__table__') else 'default'
                 session = cls._connector.get_session(bind_key)
                 if session is None:
                     raise ValueError(
@@ -147,7 +149,7 @@ class MySQLConnector(DatabaseTool):
             url = f"mysql+aiomysql://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config.get('port', 3306)}/{db_config['database']}"
             engine = create_async_engine(
                 url,
-                echo=True,
+                echo=False,
                 pool_size=5,
                 max_overflow=10,
                 pool_timeout=30,
@@ -160,7 +162,7 @@ class MySQLConnector(DatabaseTool):
             url = f"mysql+pymysql://{db_config['user']}:{db_config['password']}@{db_config['host']}:{db_config.get('port', 3306)}/{db_config['database']}"
             engine = create_engine(
                 url,
-                echo=True,
+                echo=False,
                 pool_size=5,
                 max_overflow=10,
                 pool_timeout=30,
@@ -192,12 +194,16 @@ class MySQLConnector(DatabaseTool):
                 session_factory = sessionmaker(
                     engine,
                     class_=AsyncSession,
-                    expire_on_commit=False
+                    expire_on_commit=False,
+                    autocommit=False,
+                    autoflush=True
                 )
             else:
                 session_factory = sessionmaker(
                     bind=engine,
-                    expire_on_commit=False
+                    expire_on_commit=False,
+                    autocommit=False,
+                    autoflush=True
                 )
             self.session_factories[bind_key] = session_factory
             self.sessions[bind_key] = session_factory()
@@ -207,6 +213,15 @@ class MySQLConnector(DatabaseTool):
 
     async def close(self):
         """Close all database connections."""
+        # 关闭所有会话
+        for session in self.sessions.values():
+            if self.async_mode:
+                await session.close()
+            else:
+                session.close()
+        self.sessions.clear()
+
+        # 关闭所有引擎
         for engine in self.engines.values():
             if self.async_mode:
                 await engine.dispose()
@@ -218,5 +233,7 @@ class MySQLConnector(DatabaseTool):
         return self.engines.get(bind_key)
 
     def get_session(self, bind_key='default'):
-        """获取指定绑定键的会话"""
-        return self.sessions.get(bind_key)
+        if bind_key not in self.sessions or self.sessions[bind_key].is_active:
+            # 如果会话不存在或已经处于活动状态，创建新的会话
+            self.sessions[bind_key] = self.session_factories[bind_key]()
+        return self.sessions[bind_key]
